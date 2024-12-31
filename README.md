@@ -1,129 +1,163 @@
-# Education Smart Contract
+# Education Certificate Smart Contract
 
-This project is a Clarity smart contract implementation for managing education-related use cases on the Stacks blockchain. The smart contract covers three primary functionalities:
-
-1. **Certification Verification**
-2. **Decentralized Learning Platform**
-3. **Scholarship Management**
+A decentralized education certification system built on Stacks blockchain that handles course certificates, payments, and scholarships. This smart contract enables secure and transparent management of educational credentials, course payments, and scholarship distributions.
 
 ## Features
 
-### Certification Verification
-- **Issue Certificates**: Enables trusted issuers to grant certificates to students for completed courses.
-- **Verify Certificates**: Allows anyone to verify the authenticity of a certificate by querying the blockchain.
+### Certificate Management
+- Issue digital certificates for completed courses
+- Verify certificate authenticity
+- Store certificate data on-chain with issuer and timestamp information
 
-### Decentralized Learning Platform
-- **Register Course Payments**: Students can pay for courses, with funds held until the course is completed.
-- **Mark Course Completion**: Tutors can mark courses as completed, triggering the release of payments to them.
-
-### Scholarship Management
-- **Grant Scholarships**: Automates the distribution of scholarships based on predefined eligibility criteria.
-- **Claim Scholarships**: Students can claim scholarships once eligibility criteria are met.
-
----
-
-## Contract Methods
-
-### Certification Verification
-
-#### `issue-certificate`
-**Description**: Issues a certificate to a student for a specified course.
-- **Parameters**:
-  - `student`: Principal of the student.
-  - `course-id`: Unique ID for the course.
-  - `issued-date`: The issuance date of the certificate.
-- **Returns**: Confirmation message on successful issuance.
-
-#### `verify-certificate`
-**Description**: Verifies if a student holds a certificate for a given course.
-- **Parameters**:
-  - `student`: Principal of the student.
-  - `course-id`: Unique ID for the course.
-- **Returns**: Certificate details or an error if not found.
-
-### Decentralized Learning Platform
-
-#### `register-course-payment`
-**Description**: Registers a course payment by a student.
-- **Parameters**:
-  - `course-id`: Unique ID for the course.
-  - `tutor`: Principal of the tutor.
-  - `amount`: Payment amount in microSTX.
-- **Returns**: Confirmation message on successful registration.
-
-#### `mark-course-complete`
-**Description**: Marks a course as completed by the tutor, releasing payment to the tutor.
-- **Parameters**:
-  - `course-id`: Unique ID for the course.
-  - `student`: Principal of the student.
-- **Returns**: Confirmation message and transfers payment.
+### Course Payment System
+- Register course payments
+- Track payment status
+- Automated payment release upon course completion
+- Tutor verification system
 
 ### Scholarship Management
+- Grant scholarships with eligibility dates
+- Automated scholarship claiming system
+- Time-locked scholarship distribution
 
-#### `grant-scholarship`
-**Description**: Grants a scholarship to a student.
-- **Parameters**:
-  - `student`: Principal of the student.
-  - `amount`: Scholarship amount in microSTX.
-  - `eligibility-date`: The eligibility date for the scholarship.
-- **Returns**: Confirmation message on successful grant.
+## Contract Components
 
-#### `claim-scholarship`
-**Description**: Allows students to claim their scholarship if eligibility criteria are met.
-- **Parameters**: None.
-- **Returns**: Confirmation message and transfers scholarship amount.
+### Storage Maps
 
----
+1. **Certificates Storage**
+```clarity
+(define-map certificates
+  { student: principal, course-id: uint }
+  { issuer: principal, issued-date: uint })
+```
 
-## Usage Instructions
+2. **Scholarships Storage**
+```clarity
+(define-map scholarships
+  { student: principal }
+  { amount: uint, eligibility-date: uint })
+```
 
-### Prerequisites
-- Install the Stacks CLI.
-- Deploy the Clarity smart contract on the Stacks blockchain.
+3. **Course Payments Storage**
+```clarity
+(define-map course-payments
+  { course-id: uint, student: principal }
+  { tutor: principal, amount: uint, is-completed: bool })
+```
 
-### Deployment
-1. Compile the Clarity contract using the Stacks CLI.
-   ```bash
-   clarity-cli check <contract-name>.clar
-   ```
-2. Deploy the contract to the Stacks blockchain.
-   ```bash
-   clarity-cli launch <contract-name>.clar --network <network-name>
-   ```
+### Event Tracking
 
-### Interacting with the Contract
-Use the following commands to interact with the contract:
+The contract maintains event logs for:
+- Certificate issuance
+- Scholarship grants
+- Course payments
 
-- Call a public method:
-  ```bash
-  clarity-cli execute <contract-name> <method-name> <parameters> --network <network-name>
-  ```
-- Query a map or variable:
-  ```bash
-  clarity-cli query <contract-name> <variable-name> --network <network-name>
-  ```
+Each event list has a maximum capacity of 200 entries.
 
----
+## Public Functions
+
+### Certificate Functions
+
+1. `issue-certificate`
+   - Parameters: `student`, `course-id`, `issued-date`
+   - Issues a new certificate for a completed course
+
+2. `verify-certificate`
+   - Parameters: `student`, `course-id`
+   - Verifies the authenticity of a certificate
+
+### Course Payment Functions
+
+1. `register-course-payment`
+   - Parameters: `course-id`, `tutor`, `amount`
+   - Registers a new course payment
+
+2. `mark-course-complete`
+   - Parameters: `course-id`, `student`
+   - Marks a course as complete and releases payment to student
+
+### Scholarship Functions
+
+1. `grant-scholarship`
+   - Parameters: `student`, `amount`, `eligibility-date`
+   - Grants a scholarship to a student
+
+2. `claim-scholarship`
+   - No parameters (uses tx-sender)
+   - Claims an eligible scholarship
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| u100 | Certificate already exists |
+| u101 | Certificate not found |
+| u200 | Invalid payment amount |
+| u201 | Unauthorized tutor |
+| u202 | Course already completed |
+| u301 | Eligibility criteria not met |
+| u403 | Event list capacity exceeded |
+| u404 | Entry not found |
+
+## Usage Examples
+
+### Issuing a Certificate
+```clarity
+(contract-call? .education-certificate issue-certificate 
+  'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM 
+  u1 
+  u100)
+```
+
+### Registering a Course Payment
+```clarity
+(contract-call? .education-certificate register-course-payment 
+  u1 
+  'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM 
+  u1000)
+```
+
+### Granting a Scholarship
+```clarity
+(contract-call? .education-certificate grant-scholarship 
+  'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM 
+  u5000 
+  u720)
+```
+
+## Security Considerations
+
+1. Only authorized tutors can mark courses as complete
+2. Scholarships are time-locked until eligibility date
+3. Certificate uniqueness is enforced
+4. Events have maximum capacity to prevent DOS attacks
+5. All critical operations require proper authorization
+
+## Installation
+
+1. Deploy the contract on the Stacks blockchain
+2. Initialize any necessary configuration
+3. Grant appropriate permissions for contract administration
 
 ## Testing
 
-Write tests using Clarity testing frameworks or integration tools like:
-- [Clarinet](https://clarinet.io/): A tool for testing and simulating Clarity smart contracts.
+Recommended test scenarios:
+1. Certificate issuance and verification
+2. Course payment registration and completion
+3. Scholarship granting and claiming
+4. Error handling for all edge cases
+5. Authorization checks
+6. Event emission verification
 
-### Example
-To test the `issue-certificate` method:
-```bash
-clarinet test
-```
+## Contributing
 
----
-
-## Contribution
-
-Feel free to contribute to this project by submitting issues or pull requests. Ensure all code is tested and follows the Clarity best practices.
-
----
+When contributing to this contract:
+1. Follow the existing code structure
+2. Add appropriate error codes for new functionality
+3. Document all new functions and features
+4. Ensure proper error handling
+5. Add test cases for new features
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+[Add your chosen license here]
